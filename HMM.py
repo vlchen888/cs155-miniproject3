@@ -7,6 +7,7 @@
 ########################################
 
 import random
+import numpy as np
 
 class HiddenMarkovModel:
     '''
@@ -426,6 +427,73 @@ class HiddenMarkovModel:
             state = next_state
 
         return emission, states
+
+    def generate_emission_shakespeare(self, start_word, s_count, end_count):
+        '''
+        Generates a Shakespeare emission of 10 syllables, seeded by a starting word.
+        Assumes the starting state is the one that emits the start word with highest
+        probability.
+
+        Arguments:
+            start_word: The seed word (as an int)
+            s_count:    Syllable dictionary
+            end_count:  End word syllable dictionary
+        Returns:
+            emission:   The randomly generated emission as a list.
+
+            states:     The randomly generated states as a list.
+        '''
+
+        target_syllables = 10
+        num_syllables = 0
+        emission = []
+        # Starting state is the one that emits start_word with highest probability
+        state = -1
+        best_prob = 0
+        for i in range(self.L):
+            if self.O[i][start_word] > best_prob:
+                best_prob = self.O[i][start_word]
+                state = i
+        states = []
+
+        emission.append(start_word)
+        states.append(state)
+        if start_word in end_count:
+            num_syllables += end_count[start_word]
+        else:
+            num_syllables += s_count[start_word]
+
+        while num_syllables < target_syllables:
+            # Sample next state.
+            rand_var = random.uniform(0, 1)
+            next_state = 0
+
+            while rand_var > 0:
+                rand_var -= self.A[state][next_state]
+                next_state += 1
+
+            next_state -= 1
+            state = next_state
+
+            # Append state.
+            states.append(state)
+
+            # Sample next observation.
+            # Reject emissions that fail syllable count? could temporarily update
+            # self.O[state]
+            emission_prob = self.O[state]
+            for word in range(self.D):
+                if num_syllables + s_count[word] > target_syllables:
+                    emission_prob[word] = 0
+            # Renormalize emission probabilities
+            emission_prob = np.array(emission_prob)/np.sum(emission_prob)
+            next_word = np.random.choice(self.D, p=emission_prob)
+            num_syllables += s_count[next_word]
+            emission.append(next_word)
+
+
+        return emission, states
+
 
 
     def probability_alphas(self, x):
