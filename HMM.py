@@ -313,9 +313,22 @@ class HiddenMarkovModel:
         # Similarly, a comment starting with 'M' refers to the fact that
         # the code under the comment is part of the M-step.
 
+        prev_A = np.array(self.A)
+        prev_O = np.array(self.O)
+        print("Every 10 iterations, prints the Frobenius norm of the difference\n" + \
+                "between A/O matrix from 10 iterations ago and the current A/O matrix")
         for iteration in range(1, N_iters + 1):
             if iteration % 10 == 0:
                 print("Iteration: " + str(iteration))
+                next_A = np.array(self.A)
+                print("A diff:",
+                        np.sqrt(np.sum(np.square(next_A-prev_A))))
+                prev_A = next_A
+
+                next_O = np.array(self.O)
+                print("O diff:",
+                        np.sqrt(np.sum(np.square(next_O-prev_O))))
+                prev_O = next_O
 
             # Numerator and denominator for the update terms of A and O.
             A_num = [[0. for i in range(self.L)] for j in range(self.L)]
