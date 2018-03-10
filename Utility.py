@@ -1,5 +1,6 @@
 import re
 import random
+import roman
 
 class Utility:
     def __init__(self):
@@ -48,6 +49,7 @@ class Utility:
         # Each line in a sonnet is a sequence
         for line in sonnet:
             obs_seq = []
+            
             for word in line:
                 if word not in self.obs_map:
                     self.obs_map[word] = self.obs_counter
@@ -86,9 +88,80 @@ class Utility:
                 try:
                     num = int(line)
                     sonnets[num] = []
-                    sonnet_lines = []
+                    sonnet_lines = []                 
                     continue
                 except ValueError:
+                    pass
+                next_line = line.split()
+                if len(next_line) > 0:
+                    sonnets[num].append(next_line)
+        return sonnets
+    
+    def get_spenser(self):
+        '''
+        Returns a dictionary of sonnets.
+        Each element of the dict is one of the sonnets, keyed by sonnet number
+        Each sonnet is a list of lists of lines
+        '''
+        filename = 'data/spenser.txt'
+        num = 0
+        sonnets = {}
+        sonnet_lines = []
+        with open(filename) as f:
+            for line in f:
+                line = re.sub('[:;.()?!]', '', line.strip()).lower()
+                try:
+                    num = int(roman.fromRoman(line.upper()))
+                    sonnets[num] = []
+                    sonnet_lines = []                 
+                    continue
+                except ValueError:
+                    pass
+                except roman.InvalidRomanNumeralError:
+                    pass
+                next_line = line.split()
+                if len(next_line) > 0:
+                    sonnets[num].append(next_line)
+        return sonnets
+    
+    def get_collab(self):
+        '''
+        Returns a dictionary of sonnets.
+        Each element of the dict is one of the sonnets, keyed by sonnet number
+        Each sonnet is a list of lists of lines
+        '''
+        filename = 'data/shakespeare.txt'
+        num = 0
+        sonnets = {}
+        sonnet_lines = []
+        with open(filename) as f:
+            for line in f:
+                line = re.sub('[:;.()?!]', '', line.strip()).lower()
+                try:
+                    num = int(line)
+                    sonnets[num] = []
+                    sonnet_lines = []                 
+                    continue
+                except ValueError:
+                    pass
+                next_line = line.split()
+                if len(next_line) > 0:
+                    sonnets[num].append(next_line)
+        
+        filename = 'data/spenser.txt'
+        num = 0
+        sonnet_lines = []
+        with open(filename) as f:
+            for line in f:
+                line = re.sub('[:;.()?!]', '', line.strip()).lower()
+                try:
+                    num = 154 + int(roman.fromRoman(line.upper()))
+                    sonnets[num] = []
+                    sonnet_lines = []                 
+                    continue
+                except ValueError:
+                    pass
+                except roman.InvalidRomanNumeralError:
                     pass
                 next_line = line.split()
                 if len(next_line) > 0:
@@ -112,27 +185,27 @@ class Utility:
         reverse_map = self.obs_map_reverser()
         # Get random pair of rhyming words
         words = self.rhymes[random.randint(0, len(self.rhymes) - 1)]
-
+        
         # Generate rhyming sentences
-        emission1, states1 = hmm.generate_emission_shakespeare(self.obs_map[words[0]],\
-                self.s_count, self.end_count) 
-        emission2, states2 = hmm.generate_emission_shakespeare(self.obs_map[words[1]],\
-                self.s_count, self.end_count)
+        emission1, states1 = hmm.generate_emission_shakespeare(self.obs_map[words[0]],self.s_count, self.end_count) 
+        emission2, states2 = hmm.generate_emission_shakespeare(self.obs_map[words[1]],self.s_count, self.end_count)
 
         line1 = [reverse_map[i] for i in emission1]
         # Reverse sentence to return
         line1 = list(reversed(line1))
         line1 = ' '.join(line1).capitalize()
+        line1 = line1.replace(' i ', ' I ');
 
         line2 = [reverse_map[i] for i in emission2]
         # Reverse sentence to return
         line2 = list(reversed(line2))
         line2 = ' '.join(line2).capitalize()
-
+        line2 = line2.replace(' i ', ' I ');
+        
         return line1, line2
 
     def load_syllable_dict(self):
-        with open('data/Syllable_dictionary.txt') as f:
+        with open('data/syllable_dict_expanded.txt') as f:
             for line in f:
                 arr = line.split()
                 word = arr[0]
