@@ -441,7 +441,7 @@ class HiddenMarkovModel:
 
         return emission, states
 
-    def generate_emission_shakespeare(self, start_word, s_count, end_count):
+    def generate_emission_shakespeare(self, start_word, s_count, end_count,target_syllables = 10):
         '''
         Generates a Shakespeare emission of 10 syllables, seeded by a starting word.
         Assumes the starting state is the one that emits the start word with highest
@@ -456,8 +456,7 @@ class HiddenMarkovModel:
 
             states:     The randomly generated states as a list.
         '''
-
-        target_syllables = 10
+   
         num_syllables = 0
         emission = []
         # Starting state is the one that emits start_word with highest probability

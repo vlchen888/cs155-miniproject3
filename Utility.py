@@ -20,6 +20,7 @@ class Utility:
         self.end_count = {}
         # List of rhymes
         self.rhymes = []
+        self.rhyme_classes = {}
         self.load_syllable_dict()
 
 
@@ -203,6 +204,38 @@ class Utility:
         line2 = line2.replace(' i ', ' I ');
         
         return line1, line2
+    
+    def sample_line_mult(self, hmm, k, n_syllables=10):
+        '''
+        Given a trained hmm, outputs k rhyming lines with ts syllables
+        '''
+        reverse_map = self.obs_map_reverser()
+        
+        # Get a rhyming class of size at least k
+        r_class = random.randint(0, len(self.rhyme_classes))
+        while len(self.rhyme_classes[r_class]) < k:
+            r_class = random.randint(0, len(self.rhyme_classes)-1)
+
+        words = []
+        poss_words = list(self.rhyme_classes[r_class])
+        while len(words) < k:
+            ind = random.randint(0, len(poss_words)-1)
+            words.append(poss_words[ind])
+            del(poss_words[ind])
+        
+        # Generate rhyming sentences
+        lines = []*k
+        for j in range(k):
+            emission, states = hmm.generate_emission_shakespeare(self.obs_map[words[j]],self.s_count, self.end_count, \
+                                                                 target_syllables=n_syllables) 
+            
+            lines.append([reverse_map[i] for i in emission])
+            # Reverse sentence to return
+            lines[j] = list(reversed(lines[j]))
+            lines[j] = ' '.join(lines[j]).capitalize()
+            lines[j] = lines[j].replace(' i ', ' I ')
+        
+        return lines
 
     def load_syllable_dict(self):
         with open('data/syllable_dict_expanded.txt') as f:
@@ -229,4 +262,52 @@ class Utility:
         self.rhymes.append( (sonnet[9][-1], sonnet[11][-1]) )
         self.rhymes.append( (sonnet[12][-1], sonnet[13][-1]) )
         
+    def make_rhyme_classes(self):
+        pairs_tup = self.rhymes
+        pairs = []
+        for j in range(len(pairs_tup)):
+            pairs.append(list(pairs_tup[j]))
+
+        classes = {}
+        classes_clean = {}
+
+        i = 0
+        while len(pairs) > 0:
+            classes[i] = list(pairs[0])
+            classes_clean[i] = [re.sub(r'[^\w]', '', pairs[0][0]).lower(),re.sub(r'[^\w]', '', pairs[0][1]).lower()]
+            del(pairs[0])
+            '''
+            j = 1
+            while j < len(pairs):
+                w1 = re.sub(r'[^\w]', '', pairs[j][0]).lower()
+                w2 = re.sub(r'[^\w]', '', pairs[j][1]).lower()
+                if (w1 in classes_clean[i]) or (w2 in classes_clean[i]):
+                    if pairs[j][0] not in classes[i]:
+                        classes[i].append(pairs[j][0])
+                    if pairs[j][1] not in classes[i]:
+                        classes[i].append(pairs[j][1])
+                    if w1 not in classes_clean[i]:
+                        classes_clean[i].append(w1)
+                    if w2 not in classes_clean[i]:
+                        classes_clean[i].append(w2)
+                    del(pairs[j])
+                j += 1
+            i += 1
+            '''
+            j = 1
+            while j < len(pairs):
+                w1 = re.sub(r'[^\w]', '', pairs[j][0]).lower()
+                w2 = re.sub(r'[^\w]', '', pairs[j][1]).lower()
+                if (w1 in classes_clean[i]) or (w2 in classes_clean[i]):
+                    if w1 not in classes_clean[i]:
+                        classes[i].append(pairs[j][0])
+                        classes_clean[i].append(w1)
+                    if w2 not in classes_clean[i]:
+                        classes[i].append(pairs[j][1])
+                        classes_clean[i].append(w2)
+                    del(pairs[j])
+                j += 1
+            i += 1
+
+        self.rhyme_classes = classes
 
