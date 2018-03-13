@@ -125,6 +125,49 @@ class Utility:
                     sonnets[num].append(next_line)
         return sonnets
     
+    def get_other(self,filename_other):
+        '''
+        Returns a dictionary of sonnets.
+        Each element of the dict is one of the sonnets, keyed by sonnet number
+        Each sonnet is a list of lists of lines
+        '''
+        filename = 'data/shakespeare.txt'
+        num = 0
+        sonnets = {}
+        sonnet_lines = []
+        with open(filename) as f:
+            for line in f:
+                line = re.sub('[:;.()?!]', '', line.strip()).lower()
+                try:
+                    num = int(line)
+                    sonnets[num] = []
+                    sonnet_lines = []                 
+                    continue
+                except ValueError:
+                    pass
+                next_line = line.split()
+                if len(next_line) > 0:
+                    sonnets[num].append(next_line)
+        
+        num = 0
+        sonnet_lines = []
+        with open(filename_other) as f:
+            for line in f:
+                line = re.sub('[:;.()?!]', '', line.strip()).lower()
+                try:
+                    num = 154 + int(line)
+                    sonnets[num] = []
+                    sonnet_lines = []                 
+                    continue
+                except ValueError:
+                    pass
+                except roman.InvalidRomanNumeralError:
+                    pass
+                next_line = line.split()
+                if len(next_line) > 0:
+                    sonnets[num].append(next_line)
+        return sonnets
+    
     def get_collab(self):
         '''
         Returns a dictionary of sonnets.
@@ -205,14 +248,14 @@ class Utility:
         
         return line1, line2
     
-    def sample_line_mult(self, hmm, k, n_syllables=10):
+    def sample_line_mult(self, hmm, k, n_syllables=10, buffer=0):
         '''
         Given a trained hmm, outputs k rhyming lines with ts syllables
         '''
         reverse_map = self.obs_map_reverser()
         
         # Get a rhyming class of size at least k
-        r_class = random.randint(0, len(self.rhyme_classes))
+        r_class = random.randint(0, len(self.rhyme_classes)-1)
         while len(self.rhyme_classes[r_class]) < k:
             r_class = random.randint(0, len(self.rhyme_classes)-1)
 
@@ -226,8 +269,9 @@ class Utility:
         # Generate rhyming sentences
         lines = []*k
         for j in range(k):
+            syllable_shift = random.randint(-buffer, buffer)
             emission, states = hmm.generate_emission_shakespeare(self.obs_map[words[j]],self.s_count, self.end_count, \
-                                                                 target_syllables=n_syllables) 
+                                                                 target_syllables=n_syllables+syllable_shift) 
             
             lines.append([reverse_map[i] for i in emission])
             # Reverse sentence to return
@@ -237,8 +281,30 @@ class Utility:
         
         return lines
 
+    
+    def sample_random(self, hmm, n_syllables=10):
+        '''
+        Given a trained hmm, outputs k rhyming lines with ts syllables
+        '''
+        reverse_map = self.obs_map_reverser()
+
+        word = 'twat'
+
+        
+        # Generate rhyming sentences
+        emission, states = hmm.generate_emission_shakespeare(self.obs_map[word],self.s_count, self.end_count, \
+                                                                 target_syllables=n_syllables) 
+            
+        line = [reverse_map[i] for i in emission]
+        # Reverse sentence to return
+        line = list(reversed(line))
+        line = ' '.join(line).capitalize()
+        line = line.replace(' i ', ' I ')
+        
+        return line
+    
     def load_syllable_dict(self):
-        with open('data/syllable_dict_expanded.txt') as f:
+        with open('data/syllable_dict_all.txt') as f:
             for line in f:
                 arr = line.split()
                 word = arr[0]
@@ -253,15 +319,23 @@ class Utility:
                         #self.s_count[word].append(int(token))
                         self.s_count_raw[word] = int(token)
 
-    def load_rhyme_list(self, sonnet):
-        self.rhymes.append( (sonnet[0][-1], sonnet[2][-1]) )
-        self.rhymes.append( (sonnet[1][-1], sonnet[3][-1]) )
-        self.rhymes.append( (sonnet[4][-1], sonnet[6][-1]) )
-        self.rhymes.append( (sonnet[5][-1], sonnet[7][-1]) )
-        self.rhymes.append( (sonnet[8][-1], sonnet[10][-1]) )
-        self.rhymes.append( (sonnet[9][-1], sonnet[11][-1]) )
-        self.rhymes.append( (sonnet[12][-1], sonnet[13][-1]) )
-        
+    def load_rhyme_list(self, sonnet,pattern = 1):
+        if pattern == 1:
+            self.rhymes.append( (sonnet[0][-1], sonnet[2][-1]) )
+            self.rhymes.append( (sonnet[1][-1], sonnet[3][-1]) )
+            self.rhymes.append( (sonnet[4][-1], sonnet[6][-1]) )
+            self.rhymes.append( (sonnet[5][-1], sonnet[7][-1]) )
+            self.rhymes.append( (sonnet[8][-1], sonnet[10][-1]) )
+            self.rhymes.append( (sonnet[9][-1], sonnet[11][-1]) )
+            self.rhymes.append( (sonnet[12][-1], sonnet[13][-1]) )
+        elif pattern == 2:
+            try:
+                self.rhymes.append( (sonnet[0][-1], sonnet[1][-1]) )
+                self.rhymes.append( (sonnet[1][-1], sonnet[4][-1]) )
+                self.rhymes.append( (sonnet[2][-1], sonnet[3][-1]) )
+            except IndexError:
+                print(sonnet)
+                
     def make_rhyme_classes(self):
         pairs_tup = self.rhymes
         pairs = []
@@ -271,6 +345,7 @@ class Utility:
         classes = {}
         classes_clean = {}
 
+        # See report for clean statement of algorithm
         i = 0
         while len(pairs) > 0:
             classes[i] = list(pairs[0])
@@ -306,7 +381,8 @@ class Utility:
                         classes[i].append(pairs[j][1])
                         classes_clean[i].append(w2)
                     del(pairs[j])
-                j += 1
+                else:
+                    j += 1
             i += 1
 
         self.rhyme_classes = classes
